@@ -99,7 +99,7 @@ export default {
                   setIndividualExpenses(individualExpenses.filter(exp => exp.person !== name));
                   setPartialExpenses(partialExpenses.map(exp => ({
                       ...exp,
-                      participants: exp.participants.filter(p => p !== name)
+                      participants: exp.participants.filter(p => p.name !== name)
                   })));
               };
   
@@ -122,10 +122,10 @@ export default {
   
               // 添加部分参与者费用
               const addPartialExpense = () => {
-                  setPartialExpenses([...partialExpenses, { 
-                      description: '', 
-                      amount: 0, 
-                      participants: [people[0]] 
+                  setPartialExpenses([...partialExpenses, {
+                      description: '',
+                      amount: 0,
+                      participants: [{name: people[0], shares: 1}]
                   }]);
               };
   
@@ -140,13 +140,24 @@ export default {
               const togglePartialParticipant = (expenseIndex, personName) => {
                   const updated = [...partialExpenses];
                   const participants = updated[expenseIndex].participants;
-                  
-                  if (participants.includes(personName)) {
-                      updated[expenseIndex].participants = participants.filter(p => p !== personName);
+                  const existing = participants.find(p => p.name === personName);
+
+                  if (existing) {
+                      updated[expenseIndex].participants = participants.filter(p => p.name !== personName);
                   } else {
-                      updated[expenseIndex].participants = [...participants, personName];
+                      updated[expenseIndex].participants = [...participants, {name: personName, shares: 1}];
                   }
-                  
+
+                  setPartialExpenses(updated);
+              };
+
+              // 更新部分参与者的份数
+              const updatePartialParticipantShares = (expenseIndex, personName, shares) => {
+                  const updated = [...partialExpenses];
+                  const participant = updated[expenseIndex].participants.find(p => p.name === personName);
+                  if (participant) {
+                      participant.shares = Math.max(1, parseInt(shares) || 1);
+                  }
                   setPartialExpenses(updated);
               };
   
@@ -181,8 +192,10 @@ export default {
                       const sharedAmount = perPersonShared;
                       
                       const partialAmount = partialExpenses.reduce((sum, exp) => {
-                          if (exp.participants.includes(person) && exp.participants.length > 0) {
-                              return sum + (exp.amount / exp.participants.length);
+                          const totalShares = exp.participants.reduce((s, p) => s + p.shares, 0);
+                          const personEntry = exp.participants.find(p => p.name === person);
+                          if (personEntry && totalShares > 0) {
+                              return sum + (exp.amount * personEntry.shares / totalShares);
                           }
                           return sum;
                       }, 0);
@@ -343,26 +356,53 @@ export default {
                                                   </button>
                                               </div>
                                               
-                                              <div className="flex flex-wrap gap-2">
+                                              <div className="flex flex-wrap gap-2 items-center">
                                                   <span className="text-sm text-gray-600 mr-2">参与者:</span>
-                                                  {people.map((person) => (
-                                                      <button
-                                                          key={person}
-                                                          onClick={() => togglePartialParticipant(index, person)}
-                                                          className={\`px-2 py-1 text-xs rounded-full transition-colors \${
-                                                              expense.participants.includes(person)
-                                                                  ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
-                                                                  : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
-                                                          }\`}
-                                                      >
-                                                          {person}
-                                                      </button>
-                                                  ))}
+                                                  {people.map((person) => {
+                                                      const entry = expense.participants.find(p => p.name === person);
+                                                      const isParticipant = !!entry;
+                                                      return (
+                                                          <div key={person} className="flex items-center gap-1">
+                                                              <button
+                                                                  onClick={() => togglePartialParticipant(index, person)}
+                                                                  className={\`px-2 py-1 text-xs rounded-full transition-colors \${
+                                                                      isParticipant
+                                                                          ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                                                                          : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                                                                  }\`}
+                                                              >
+                                                                  {person}
+                                                              </button>
+                                                              {isParticipant && (
+                                                                  <div className="flex items-center gap-0.5 bg-indigo-50 rounded-full px-1 border border-indigo-200">
+                                                                      <button
+                                                                          onClick={() => updatePartialParticipantShares(index, person, entry.shares - 1)}
+                                                                          disabled={entry.shares <= 1}
+                                                                          className="text-indigo-600 hover:text-indigo-800 px-1 text-xs disabled:opacity-40"
+                                                                      >−</button>
+                                                                      <span className="text-xs text-indigo-700 font-medium w-4 text-center">{entry.shares}</span>
+                                                                      <button
+                                                                          onClick={() => updatePartialParticipantShares(index, person, entry.shares + 1)}
+                                                                          className="text-indigo-600 hover:text-indigo-800 px-1 text-xs"
+                                                                      >+</button>
+                                                                  </div>
+                                                              )}
+                                                          </div>
+                                                      );
+                                                  })}
                                               </div>
-                                              
+
                                               {expense.participants.length > 0 && (
-                                                  <div className="mt-2 text-sm text-gray-600">
-                                                      每人分摊: ¥{expense.participants.length > 0 ? (expense.amount / expense.participants.length).toFixed(2) : '0.00'}
+                                                  <div className="mt-2 text-sm text-gray-600 flex flex-wrap gap-2">
+                                                      {(() => {
+                                                          const totalShares = expense.participants.reduce((s, p) => s + p.shares, 0);
+                                                          return expense.participants.map(p => (
+                                                              <span key={p.name}>
+                                                                  {p.name}: ¥{(expense.amount * p.shares / totalShares).toFixed(2)}
+                                                                  {p.shares > 1 && <span className="text-indigo-600 ml-1">×{p.shares}份</span>}
+                                                              </span>
+                                                          ));
+                                                      })()}
                                                   </div>
                                               )}
                                           </div>
@@ -493,7 +533,7 @@ export default {
                                                           <span className="font-mono">¥{expense.amount.toFixed(2)}</span>
                                                       </div>
                                                       <div className="text-xs text-gray-500 ml-2">
-                                                          参与者: {expense.participants.join(', ')}
+                                                          参与者: {expense.participants.map(p => p.shares > 1 ? \`\${p.name}×\${p.shares}份\` : p.name).join(', ')}
                                                       </div>
                                                   </div>
                                               ))}
