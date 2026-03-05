@@ -84,11 +84,17 @@ export default {
               const [sharedExpenses, setSharedExpenses] = useState([]);
               const [partialExpenses, setPartialExpenses] = useState([]);
               const [individualExpenses, setIndividualExpenses] = useState([]);
+              const [manualExpenses, setManualExpenses] = useState([]);
   
               // 添加参与者
               const addPerson = () => {
                   if (newPersonName.trim() && !people.includes(newPersonName.trim())) {
-                      setPeople([...people, newPersonName.trim()]);
+                      const name = newPersonName.trim();
+                      setPeople([...people, name]);
+                      setManualExpenses(manualExpenses.map(exp => ({
+                          ...exp,
+                          amounts: {...exp.amounts, [name]: 0}
+                      })));
                       setNewPersonName('');
                   }
               };
@@ -101,6 +107,11 @@ export default {
                       ...exp,
                       participants: exp.participants.filter(p => p.name !== name)
                   })));
+                  setManualExpenses(manualExpenses.map(exp => {
+                      const newAmounts = {...exp.amounts};
+                      delete newAmounts[name];
+                      return {...exp, amounts: newAmounts};
+                  }));
               };
   
               // 添加全员共同费用
@@ -182,7 +193,33 @@ export default {
               const removeIndividualExpense = (index) => {
                   setIndividualExpenses(individualExpenses.filter((_, i) => i !== index));
               };
-  
+
+              // 添加手动分配费用
+              const addManualExpense = () => {
+                  const amounts = {};
+                  people.forEach(p => { amounts[p] = 0; });
+                  setManualExpenses([...manualExpenses, {description: '', amounts}]);
+              };
+
+              // 更新手动分配费用描述
+              const updateManualExpenseDescription = (index, value) => {
+                  const updated = [...manualExpenses];
+                  updated[index].description = value;
+                  setManualExpenses(updated);
+              };
+
+              // 更新手动分配费用中某人的金额
+              const updateManualExpenseAmount = (index, personName, value) => {
+                  const updated = [...manualExpenses];
+                  updated[index].amounts[personName] = parseFloat(value) || 0;
+                  setManualExpenses(updated);
+              };
+
+              // 删除手动分配费用
+              const removeManualExpense = (index) => {
+                  setManualExpenses(manualExpenses.filter((_, i) => i !== index));
+              };
+
               // 计算结果
               const calculateResults = () => {
                   const totalShared = sharedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -203,13 +240,18 @@ export default {
                       const individualAmount = individualExpenses
                           .filter(exp => exp.person === person)
                           .reduce((sum, exp) => sum + exp.amount, 0);
-                      
+
+                      const manualAmount = manualExpenses.reduce((sum, exp) => {
+                          return sum + (exp.amounts[person] || 0);
+                      }, 0);
+
                       return {
                           name: person,
                           sharedAmount,
                           partialAmount,
                           individualAmount,
-                          totalAmount: sharedAmount + partialAmount + individualAmount
+                          manualAmount,
+                          totalAmount: sharedAmount + partialAmount + individualAmount + manualAmount
                       };
                   });
   
@@ -226,7 +268,7 @@ export default {
                               <CalculatorIcon />
                               聚会AA分钱计算器
                           </h1>
-                          <p className="text-gray-600">支持全员分摊、部分参与者分摊和个人费用</p>
+                          <p className="text-gray-600">支持全员分摊、部分参与者分摊、个人费用和手动分配</p>
                       </div>
   
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -461,8 +503,70 @@ export default {
                                       ))}
                                   </div>
                               </div>
+
+                              {/* 手动分配费用 */}
+                              <div className="bg-gray-50 p-6 rounded-lg">
+                                  <h2 className="text-xl font-semibold mb-1 flex items-center gap-2">
+                                      <ReceiptIcon />
+                                      手动分配费用
+                                  </h2>
+                                  <p className="text-sm text-gray-500 mb-4">直接填写每人应付金额，适合账单已知各自份额的场景</p>
+
+                                  <button
+                                      onClick={addManualExpense}
+                                      className="mb-4 px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 flex items-center gap-1"
+                                  >
+                                      <PlusIcon />
+                                      添加手动账单
+                                  </button>
+
+                                  <div className="space-y-4">
+                                      {manualExpenses.map((expense, index) => {
+                                          const total = Object.values(expense.amounts).reduce((s, v) => s + v, 0);
+                                          return (
+                                              <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white">
+                                                  <div className="flex gap-2 items-center mb-3">
+                                                      <input
+                                                          type="text"
+                                                          value={expense.description}
+                                                          onChange={(e) => updateManualExpenseDescription(index, e.target.value)}
+                                                          placeholder="账单描述"
+                                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                      />
+                                                      <button
+                                                          onClick={() => removeManualExpense(index)}
+                                                          className="text-red-500 hover:text-red-700 p-1"
+                                                      >
+                                                          <MinusIcon />
+                                                      </button>
+                                                  </div>
+
+                                                  <div className="space-y-2">
+                                                      {people.map(person => (
+                                                          <div key={person} className="flex items-center gap-2">
+                                                              <span className="text-sm text-gray-700 w-16 shrink-0">{person}</span>
+                                                              <input
+                                                                  type="number"
+                                                                  value={expense.amounts[person] || 0}
+                                                                  onChange={(e) => updateManualExpenseAmount(index, person, e.target.value)}
+                                                                  placeholder="0"
+                                                                  className="w-28 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                              />
+                                                              <span className="text-xs text-gray-400">元</span>
+                                                          </div>
+                                                      ))}
+                                                  </div>
+
+                                                  <div className="mt-2 text-sm text-gray-500 text-right">
+                                                      合计: <span className="font-mono text-teal-700 font-medium">¥{total.toFixed(2)}</span>
+                                                  </div>
+                                              </div>
+                                          );
+                                      })}
+                                  </div>
+                              </div>
                           </div>
-  
+
                           {/* 右侧：计算结果 */}
                           <div className="space-y-6">
                               <div className="bg-blue-50 p-6 rounded-lg">
@@ -486,6 +590,10 @@ export default {
                                                   <div className="flex justify-between">
                                                       <span className="text-gray-600">个人费用：</span>
                                                       <span className="font-mono">¥{person.individualAmount.toFixed(2)}</span>
+                                                  </div>
+                                                  <div className="flex justify-between">
+                                                      <span className="text-gray-600">手动分配：</span>
+                                                      <span className="font-mono">¥{person.manualAmount.toFixed(2)}</span>
                                                   </div>
                                                   <div className="flex justify-between font-semibold text-blue-600 border-t pt-1">
                                                       <span>应付总额：</span>
@@ -551,6 +659,31 @@ export default {
                                                       <span className="font-mono">¥{expense.amount.toFixed(2)}</span>
                                                   </div>
                                               ))}
+                                          </div>
+                                      </div>
+                                  )}
+
+                                  {manualExpenses.length > 0 && (
+                                      <div className="mt-4">
+                                          <h3 className="font-semibold text-teal-600 mb-2">手动分配费用</h3>
+                                          <div className="space-y-2">
+                                              {manualExpenses.map((expense, index) => {
+                                                  const total = Object.values(expense.amounts).reduce((s, v) => s + v, 0);
+                                                  return (
+                                                      <div key={index} className="text-sm">
+                                                          <div className="flex justify-between">
+                                                              <span>{expense.description || '未命名费用'}</span>
+                                                              <span className="font-mono">¥{total.toFixed(2)}</span>
+                                                          </div>
+                                                          <div className="text-xs text-gray-500 ml-2">
+                                                              {Object.entries(expense.amounts)
+                                                                  .filter(([, v]) => v > 0)
+                                                                  .map(([name, v]) => \`\${name}: ¥\${v.toFixed(2)}\`)
+                                                                  .join('  ')}
+                                                          </div>
+                                                      </div>
+                                                  );
+                                              })}
                                           </div>
                                       </div>
                                   )}
