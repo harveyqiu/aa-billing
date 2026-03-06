@@ -91,6 +91,10 @@ export default {
                   if (newPersonName.trim() && !people.includes(newPersonName.trim())) {
                       const name = newPersonName.trim();
                       setPeople([...people, name]);
+                      setSharedExpenses(sharedExpenses.map(exp => ({
+                          ...exp,
+                          shares: {...exp.shares, [name]: 1}
+                      })));
                       setManualExpenses(manualExpenses.map(exp => ({
                           ...exp,
                           amounts: {...exp.amounts, [name]: 0}
@@ -103,6 +107,11 @@ export default {
               const removePerson = (name) => {
                   setPeople(people.filter(p => p !== name));
                   setIndividualExpenses(individualExpenses.filter(exp => exp.person !== name));
+                  setSharedExpenses(sharedExpenses.map(exp => {
+                      const newShares = {...exp.shares};
+                      delete newShares[name];
+                      return {...exp, shares: newShares};
+                  }));
                   setPartialExpenses(partialExpenses.map(exp => ({
                       ...exp,
                       participants: exp.participants.filter(p => p.name !== name)
@@ -116,7 +125,9 @@ export default {
   
               // 添加全员共同费用
               const addSharedExpense = () => {
-                  setSharedExpenses([...sharedExpenses, { description: '', amount: 0 }]);
+                  const shares = {};
+                  people.forEach(p => { shares[p] = 1; });
+                  setSharedExpenses([...sharedExpenses, { description: '', amount: 0, shares }]);
               };
   
               // 更新全员共同费用
@@ -130,7 +141,14 @@ export default {
               const removeSharedExpense = (index) => {
                   setSharedExpenses(sharedExpenses.filter((_, i) => i !== index));
               };
-  
+
+              // 更新全员共同费用中某人的份数
+              const updateSharedExpenseShares = (expenseIndex, personName, shares) => {
+                  const updated = [...sharedExpenses];
+                  updated[expenseIndex].shares[personName] = Math.max(1, parseInt(shares) || 1);
+                  setSharedExpenses(updated);
+              };
+
               // 添加部分参与者费用
               const addPartialExpense = () => {
                   setPartialExpenses([...partialExpenses, {
@@ -222,11 +240,13 @@ export default {
 
               // 计算结果
               const calculateResults = () => {
-                  const totalShared = sharedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-                  const perPersonShared = totalShared / people.length;
-                  
                   const results = people.map(person => {
-                      const sharedAmount = perPersonShared;
+                      const sharedAmount = sharedExpenses.reduce((sum, exp) => {
+                          const totalShares = Object.values(exp.shares || {}).reduce((s, v) => s + v, 0);
+                          const personShares = (exp.shares || {})[person] || 1;
+                          const denom = totalShares > 0 ? totalShares : people.length;
+                          return sum + (exp.amount * personShares / denom);
+                      }, 0);
                       
                       const partialAmount = partialExpenses.reduce((sum, exp) => {
                           const totalShares = exp.participants.reduce((s, p) => s + p.shares, 0);
@@ -329,31 +349,71 @@ export default {
                                       添加全员费用
                                   </button>
   
-                                  <div className="space-y-3">
-                                      {sharedExpenses.map((expense, index) => (
-                                          <div key={index} className="flex gap-2 items-center">
-                                              <input
-                                                  type="text"
-                                                  value={expense.description}
-                                                  onChange={(e) => updateSharedExpense(index, 'description', e.target.value)}
-                                                  placeholder="费用描述"
-                                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                              />
-                                              <input
-                                                  type="number"
-                                                  value={expense.amount}
-                                                  onChange={(e) => updateSharedExpense(index, 'amount', e.target.value)}
-                                                  placeholder="金额"
-                                                  className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                              />
-                                              <button
-                                                  onClick={() => removeSharedExpense(index)}
-                                                  className="text-red-500 hover:text-red-700 p-1"
-                                              >
-                                                  <MinusIcon />
-                                              </button>
-                                          </div>
-                                      ))}
+                                  <div className="space-y-4">
+                                      {sharedExpenses.map((expense, index) => {
+                                          const totalShares = Object.values(expense.shares || {}).reduce((s, v) => s + v, 0);
+                                          const isWeighted = totalShares > 0 && people.some(p => (expense.shares || {})[p] !== 1);
+                                          return (
+                                              <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white">
+                                                  <div className="flex gap-2 items-center mb-3">
+                                                      <input
+                                                          type="text"
+                                                          value={expense.description}
+                                                          onChange={(e) => updateSharedExpense(index, 'description', e.target.value)}
+                                                          placeholder="费用描述"
+                                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                      />
+                                                      <input
+                                                          type="number"
+                                                          value={expense.amount}
+                                                          onChange={(e) => updateSharedExpense(index, 'amount', e.target.value)}
+                                                          placeholder="金额（元）"
+                                                          className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                      />
+                                                      <button
+                                                          onClick={() => removeSharedExpense(index)}
+                                                          className="text-red-500 hover:text-red-700 p-1"
+                                                      >
+                                                          <MinusIcon />
+                                                      </button>
+                                                  </div>
+
+                                                  <div className="flex flex-wrap gap-3 items-center">
+                                                      <span className="text-sm text-gray-500">每人份数（份数越多，分摊越多）:</span>
+                                                      {people.map(person => {
+                                                          const personShares = (expense.shares || {})[person] || 1;
+                                                          return (
+                                                              <label key={person} className="flex items-center gap-1 text-sm">
+                                                                  <span className="text-gray-700">{person}</span>
+                                                                  <input
+                                                                      type="number"
+                                                                      min="1"
+                                                                      value={personShares}
+                                                                      onChange={(e) => updateSharedExpenseShares(index, person, e.target.value)}
+                                                                      className="w-12 px-1 py-0.5 border border-purple-300 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                  />
+                                                                  <span className="text-gray-500 text-xs">份</span>
+                                                              </label>
+                                                          );
+                                                      })}
+                                                  </div>
+
+                                                  {totalShares > 0 && (
+                                                      <div className="mt-2 text-sm text-gray-500 flex flex-wrap gap-3">
+                                                          {people.map(p => {
+                                                              const ps = (expense.shares || {})[p] || 1;
+                                                              return (
+                                                                  <span key={p}>
+                                                                      {p}: ¥{(expense.amount * ps / totalShares).toFixed(2)}
+                                                                      {isWeighted && ps > 1 && <span className="text-purple-600 ml-1">×{ps}份</span>}
+                                                                  </span>
+                                                              );
+                                                          })}
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          );
+                                      })}
                                   </div>
                               </div>
   
@@ -387,7 +447,7 @@ export default {
                                                       type="number"
                                                       value={expense.amount}
                                                       onChange={(e) => updatePartialExpense(index, 'amount', e.target.value)}
-                                                      placeholder="金额"
+                                                      placeholder="金额（元）"
                                                       className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                                   />
                                                   <button
@@ -416,17 +476,15 @@ export default {
                                                                   {person}
                                                               </button>
                                                               {isParticipant && (
-                                                                  <div className="flex items-center gap-0.5 bg-indigo-50 rounded-full px-1 border border-indigo-200">
-                                                                      <button
-                                                                          onClick={() => updatePartialParticipantShares(index, person, entry.shares - 1)}
-                                                                          disabled={entry.shares <= 1}
-                                                                          className="text-indigo-600 hover:text-indigo-800 px-1 text-xs disabled:opacity-40"
-                                                                      >−</button>
-                                                                      <span className="text-xs text-indigo-700 font-medium w-4 text-center">{entry.shares}</span>
-                                                                      <button
-                                                                          onClick={() => updatePartialParticipantShares(index, person, entry.shares + 1)}
-                                                                          className="text-indigo-600 hover:text-indigo-800 px-1 text-xs"
-                                                                      >+</button>
+                                                                  <div className="flex items-center gap-0.5">
+                                                                      <input
+                                                                          type="number"
+                                                                          min="1"
+                                                                          value={entry.shares}
+                                                                          onChange={(e) => updatePartialParticipantShares(index, person, e.target.value)}
+                                                                          className="w-10 px-1 py-0.5 border border-indigo-300 rounded text-center text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                                      />
+                                                                      <span className="text-xs text-gray-500">份</span>
                                                                   </div>
                                                               )}
                                                           </div>
@@ -490,7 +548,7 @@ export default {
                                                   type="number"
                                                   value={expense.amount}
                                                   onChange={(e) => updateIndividualExpense(index, 'amount', e.target.value)}
-                                                  placeholder="金额"
+                                                  placeholder="金额（元）"
                                                   className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                                               />
                                               <button
@@ -620,12 +678,23 @@ export default {
                                       <div className="mb-4">
                                           <h3 className="font-semibold text-purple-600 mb-2">全员共同费用</h3>
                                           <div className="space-y-2">
-                                              {sharedExpenses.map((expense, index) => (
-                                                  <div key={index} className="flex justify-between text-sm">
-                                                      <span>{expense.description || '未命名费用'}</span>
-                                                      <span className="font-mono">¥{expense.amount.toFixed(2)}</span>
-                                                  </div>
-                                              ))}
+                                              {sharedExpenses.map((expense, index) => {
+                                                  const totalShares = Object.values(expense.shares || {}).reduce((s, v) => s + v, 0);
+                                                  const isWeighted = people.some(p => (expense.shares || {})[p] !== 1);
+                                                  return (
+                                                      <div key={index} className="text-sm">
+                                                          <div className="flex justify-between">
+                                                              <span>{expense.description || '未命名费用'}</span>
+                                                              <span className="font-mono">¥{expense.amount.toFixed(2)}</span>
+                                                          </div>
+                                                          {isWeighted && totalShares > 0 && (
+                                                              <div className="text-xs text-gray-500 ml-2">
+                                                                  {people.map(p => `${p}×${(expense.shares || {})[p] || 1}份`).join('  ')}
+                                                              </div>
+                                                          )}
+                                                      </div>
+                                                  );
+                                              })}
                                           </div>
                                       </div>
                                   )}
