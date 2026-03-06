@@ -689,7 +689,7 @@ export default {
                                                           </div>
                                                           {isWeighted && totalShares > 0 && (
                                                               <div className="text-xs text-gray-500 ml-2">
-                                                                  {people.map(p => `${p}×${(expense.shares || {})[p] || 1}份`).join('  ')}
+                                                                  {people.map(p => p + '×' + ((expense.shares || {})[p] || 1) + '份').join('  ')}
                                                               </div>
                                                           )}
                                                       </div>
