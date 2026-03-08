@@ -26,7 +26,23 @@ export default {
       <div id="root"></div>
       
       <script type="text/babel">
-          const { useState } = React;
+          const { useState, useEffect } = React;
+
+          const STORAGE_KEY = 'aa-billing-data';
+
+          const loadFromStorage = () => {
+              try {
+                  const saved = localStorage.getItem(STORAGE_KEY);
+                  if (saved) return JSON.parse(saved);
+              } catch (e) {}
+              return null;
+          };
+
+          const saveToStorage = (data) => {
+              try {
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+              } catch (e) {}
+          };
           
           // Lucide React图标组件（简化版）
           const PlusIcon = () => (
@@ -79,12 +95,26 @@ export default {
           );
   
           function AABillCalculator() {
-              const [people, setPeople] = useState(['小明', '小红', '小刚']);
+              const saved = loadFromStorage();
+              const [people, setPeople] = useState(saved ? saved.people : ['小明', '小红', '小刚']);
               const [newPersonName, setNewPersonName] = useState('');
-              const [sharedExpenses, setSharedExpenses] = useState([]);
-              const [partialExpenses, setPartialExpenses] = useState([]);
-              const [individualExpenses, setIndividualExpenses] = useState([]);
-              const [manualExpenses, setManualExpenses] = useState([]);
+              const [sharedExpenses, setSharedExpenses] = useState(saved ? saved.sharedExpenses : []);
+              const [partialExpenses, setPartialExpenses] = useState(saved ? saved.partialExpenses : []);
+              const [individualExpenses, setIndividualExpenses] = useState(saved ? saved.individualExpenses : []);
+              const [manualExpenses, setManualExpenses] = useState(saved ? saved.manualExpenses : []);
+
+              useEffect(() => {
+                  saveToStorage({ people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses });
+              }, [people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses]);
+
+              const clearAllBills = () => {
+                  if (window.confirm('确定要清除所有账单吗？此操作不可撤销。')) {
+                      setSharedExpenses([]);
+                      setPartialExpenses([]);
+                      setIndividualExpenses([]);
+                      setManualExpenses([]);
+                  }
+              };
   
               // 添加参与者
               const addPerson = () => {
@@ -283,12 +313,20 @@ export default {
   
               return (
                   <div className="max-w-6xl mx-auto p-6 bg-white min-h-screen">
-                      <div className="mb-8">
-                          <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-                              <CalculatorIcon />
-                              聚会AA分钱计算器
-                          </h1>
-                          <p className="text-gray-600">支持全员分摊、部分参与者分摊、个人费用和手动分配</p>
+                      <div className="mb-8 flex items-start justify-between">
+                          <div>
+                              <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                  <CalculatorIcon />
+                                  聚会AA分钱计算器
+                              </h1>
+                              <p className="text-gray-600">支持全员分摊、部分参与者分摊、个人费用和手动分配</p>
+                          </div>
+                          <button
+                              onClick={clearAllBills}
+                              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm font-medium whitespace-nowrap"
+                          >
+                              清除所有账单
+                          </button>
                       </div>
   
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
