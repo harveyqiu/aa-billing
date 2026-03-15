@@ -1,14 +1,4 @@
-export default {
-    async fetch(request, env, ctx) {
-      const url = new URL(request.url);
-      
-      // 只处理GET请求
-      if (request.method !== 'GET') {
-        return new Response('Method not allowed', { status: 405 });
-      }
-      
-      // 返回完整的HTML页面
-      const html = `<!DOCTYPE html>
+<!DOCTYPE html>
   <html lang="zh-CN">
   <head>
       <meta charset="UTF-8">
@@ -26,7 +16,7 @@ export default {
       <div id="root"></div>
       
       <script type="text/babel">
-          const { useState, useEffect } = React;
+          const { useState, useEffect, useMemo } = React;
 
           const STORAGE_KEY = 'aa-billing-data';
 
@@ -34,14 +24,20 @@ export default {
               try {
                   const saved = localStorage.getItem(STORAGE_KEY);
                   if (saved) return JSON.parse(saved);
-              } catch (e) {}
+              } catch (e) {
+                  console.error('[aa-billing] 读取本地存储失败:', e);
+              }
               return null;
           };
 
           const saveToStorage = (data) => {
               try {
                   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-              } catch (e) {}
+                  return true;
+              } catch (e) {
+                  console.error('[aa-billing] 保存到本地存储失败:', e);
+                  return false;
+              }
           };
           
           // Lucide React图标组件（简化版）
@@ -96,6 +92,7 @@ export default {
   
           function AABillCalculator() {
               const saved = loadFromStorage();
+              const [storageError, setStorageError] = useState(false);
               const [people, setPeople] = useState(saved ? saved.people : ['小明', '小红', '小刚']);
               const [newPersonName, setNewPersonName] = useState('');
               const [sharedExpenses, setSharedExpenses] = useState(saved ? saved.sharedExpenses : []);
@@ -104,7 +101,9 @@ export default {
               const [manualExpenses, setManualExpenses] = useState(saved ? saved.manualExpenses : []);
 
               useEffect(() => {
-                  saveToStorage({ people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses });
+                  const ok = saveToStorage({ people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses });
+                  if (!ok) setStorageError(true);
+                  else setStorageError(false);
               }, [people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses]);
 
               const clearAllBills = () => {
@@ -268,16 +267,16 @@ export default {
                   setManualExpenses(manualExpenses.filter((_, i) => i !== index));
               };
 
-              // 计算结果
-              const calculateResults = () => {
-                  const results = people.map(person => {
+              // 计算结果（useMemo 缓存，依赖项不变时不重复计算）
+              const results = useMemo(() => {
+                  return people.map(person => {
                       const sharedAmount = sharedExpenses.reduce((sum, exp) => {
                           const totalShares = Object.values(exp.shares || {}).reduce((s, v) => s + v, 0);
                           const personShares = (exp.shares || {})[person] || 1;
                           const denom = totalShares > 0 ? totalShares : people.length;
                           return sum + (exp.amount * personShares / denom);
                       }, 0);
-                      
+
                       const partialAmount = partialExpenses.reduce((sum, exp) => {
                           const totalShares = exp.participants.reduce((s, p) => s + p.shares, 0);
                           const personEntry = exp.participants.find(p => p.name === person);
@@ -286,7 +285,7 @@ export default {
                           }
                           return sum;
                       }, 0);
-                      
+
                       const individualAmount = individualExpenses
                           .filter(exp => exp.person === person)
                           .reduce((sum, exp) => sum + exp.amount, 0);
@@ -304,15 +303,21 @@ export default {
                           totalAmount: sharedAmount + partialAmount + individualAmount + manualAmount
                       };
                   });
-  
-                  return results;
-              };
-  
-              const results = calculateResults();
-              const totalAmount = results.reduce((sum, person) => sum + person.totalAmount, 0);
+              }, [people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses]);
+
+              const totalAmount = useMemo(
+                  () => results.reduce((sum, person) => sum + person.totalAmount, 0),
+                  [results]
+              );
   
               return (
                   <div className="max-w-6xl mx-auto p-6 bg-white min-h-screen">
+                      {storageError && (
+                          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+                              <span>⚠️ 数据自动保存失败（可能是隐私模式或存储已满），刷新页面后数据将丢失。</span>
+                              <button onClick={() => setStorageError(false)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+                          </div>
+                      )}
                       <div className="mb-8 flex items-start justify-between">
                           <div>
                               <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
@@ -505,11 +510,11 @@ export default {
                                                           <div key={person} className="flex items-center gap-1">
                                                               <button
                                                                   onClick={() => togglePartialParticipant(index, person)}
-                                                                  className={\`px-2 py-1 text-xs rounded-full transition-colors \${
+                                                                  className={`px-2 py-1 text-xs rounded-full transition-colors ${
                                                                       isParticipant
                                                                           ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
                                                                           : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
-                                                                  }\`}
+                                                                  }`}
                                                               >
                                                                   {person}
                                                               </button>
@@ -748,7 +753,7 @@ export default {
                                                           <span className="font-mono">¥{expense.amount.toFixed(2)}</span>
                                                       </div>
                                                       <div className="text-xs text-gray-500 ml-2">
-                                                          参与者: {expense.participants.map(p => p.shares > 1 ? \`\${p.name}×\${p.shares}份\` : p.name).join(', ')}
+                                                          参与者: {expense.participants.map(p => p.shares > 1 ? `${p.name}×${p.shares}份` : p.name).join(', ')}
                                                       </div>
                                                   </div>
                                               ))}
@@ -785,7 +790,7 @@ export default {
                                                           <div className="text-xs text-gray-500 ml-2">
                                                               {Object.entries(expense.amounts)
                                                                   .filter(([, v]) => v > 0)
-                                                                  .map(([name, v]) => \`\${name}: ¥\${v.toFixed(2)}\`)
+                                                                  .map(([name, v]) => `${name}: ¥${v.toFixed(2)}`)
                                                                   .join('  ')}
                                                           </div>
                                                       </div>
@@ -805,13 +810,4 @@ export default {
           ReactDOM.render(<AABillCalculator />, document.getElementById('root'));
       </script>
   </body>
-  </html>`;
-  
-      return new Response(html, {
-        headers: {
-          'Content-Type': 'text/html;charset=UTF-8',
-          'Cache-Control': 'public, max-age=86400', // 缓存24小时
-        },
-      });
-    },
-  };
+  </html>

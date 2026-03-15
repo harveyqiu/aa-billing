@@ -1,6 +1,0 @@
-name = "aa-bill-calculator"
-main = "src/index.js"
-compatibility_date = "2023-12-01"
-
-[env.production]
-name = "aa-bill-calculator"
