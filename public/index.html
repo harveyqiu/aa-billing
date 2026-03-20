@@ -350,12 +350,12 @@
                                           value={newPersonName}
                                           onChange={(e) => setNewPersonName(e.target.value)}
                                           placeholder="输入姓名"
-                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                           onKeyPress={(e) => e.key === 'Enter' && addPerson()}
                                       />
                                       <button
                                           onClick={addPerson}
-                                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-1"
+                                          className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 flex items-center gap-1"
                                       >
                                           <PlusIcon />
                                           添加
@@ -386,7 +386,7 @@
                                   
                                   <button
                                       onClick={addSharedExpense}
-                                      className="mb-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center gap-1"
+                                      className="mb-4 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 flex items-center gap-1"
                                   >
                                       <PlusIcon />
                                       添加全员费用
@@ -404,14 +404,14 @@
                                                           value={expense.description}
                                                           onChange={(e) => updateSharedExpense(index, 'description', e.target.value)}
                                                           placeholder="费用描述"
-                                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                                       />
                                                       <input
                                                           type="number"
                                                           value={expense.amount}
                                                           onChange={(e) => updateSharedExpense(index, 'amount', e.target.value)}
                                                           placeholder="金额（元）"
-                                                          className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                          className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                                       />
                                                       <button
                                                           onClick={() => removeSharedExpense(index)}
@@ -433,7 +433,7 @@
                                                                       min="1"
                                                                       value={personShares}
                                                                       onChange={(e) => updateSharedExpenseShares(index, person, e.target.value)}
-                                                                      className="w-12 px-1 py-0.5 border border-purple-300 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                      className="w-12 px-1 py-0.5 border border-pink-300 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-pink-500"
                                                                   />
                                                                   <span className="text-gray-500 text-xs">份</span>
                                                               </label>
@@ -448,7 +448,7 @@
                                                               return (
                                                                   <span key={p}>
                                                                       {p}: ¥{(expense.amount * ps / totalShares).toFixed(2)}
-                                                                      {isWeighted && ps > 1 && <span className="text-purple-600 ml-1">×{ps}份</span>}
+                                                                      {isWeighted && ps > 1 && <span className="text-pink-600 ml-1">×{ps}份</span>}
                                                                   </span>
                                                               );
                                                           })}
@@ -469,7 +469,7 @@
                                   
                                   <button
                                       onClick={addPartialExpense}
-                                      className="mb-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-1"
+                                      className="mb-4 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 flex items-center gap-1"
                                   >
                                       <PlusIcon />
                                       添加部分费用
@@ -484,14 +484,14 @@
                                                       value={expense.description}
                                                       onChange={(e) => updatePartialExpense(index, 'description', e.target.value)}
                                                       placeholder="费用描述"
-                                                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                                   />
                                                   <input
                                                       type="number"
                                                       value={expense.amount}
                                                       onChange={(e) => updatePartialExpense(index, 'amount', e.target.value)}
                                                       placeholder="金额（元）"
-                                                      className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                      className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                                   />
                                                   <button
                                                       onClick={() => removePartialExpense(index)}
@@ -512,7 +512,7 @@
                                                                   onClick={() => togglePartialParticipant(index, person)}
                                                                   className={`px-2 py-1 text-xs rounded-full transition-colors ${
                                                                       isParticipant
-                                                                          ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                                                                          ? 'bg-pink-100 text-pink-800 border border-pink-300'
                                                                           : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
                                                                   }`}
                                                               >
@@ -525,7 +525,7 @@
                                                                           min="1"
                                                                           value={entry.shares}
                                                                           onChange={(e) => updatePartialParticipantShares(index, person, e.target.value)}
-                                                                          className="w-10 px-1 py-0.5 border border-indigo-300 rounded text-center text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                                          className="w-10 px-1 py-0.5 border border-pink-300 rounded text-center text-xs focus:outline-none focus:ring-1 focus:ring-pink-500"
                                                                       />
                                                                       <span className="text-xs text-gray-500">份</span>
                                                                   </div>
@@ -542,7 +542,7 @@
                                                           return expense.participants.map(p => (
                                                               <span key={p.name}>
                                                                   {p.name}: ¥{(expense.amount * p.shares / totalShares).toFixed(2)}
-                                                                  {p.shares > 1 && <span className="text-indigo-600 ml-1">×{p.shares}份</span>}
+                                                                  {p.shares > 1 && <span className="text-pink-600 ml-1">×{p.shares}份</span>}
                                                               </span>
                                                           ));
                                                       })()}
@@ -562,7 +562,7 @@
                                   
                                   <button
                                       onClick={addIndividualExpense}
-                                      className="mb-4 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 flex items-center gap-1"
+                                      className="mb-4 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 flex items-center gap-1"
                                   >
                                       <PlusIcon />
                                       添加个人费用
@@ -574,7 +574,7 @@
                                               <select
                                                   value={expense.person}
                                                   onChange={(e) => updateIndividualExpense(index, 'person', e.target.value)}
-                                                  className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                  className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                               >
                                                   {people.map(person => (
                                                       <option key={person} value={person}>{person}</option>
@@ -585,14 +585,14 @@
                                                   value={expense.description}
                                                   onChange={(e) => updateIndividualExpense(index, 'description', e.target.value)}
                                                   placeholder="费用描述"
-                                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                               />
                                               <input
                                                   type="number"
                                                   value={expense.amount}
                                                   onChange={(e) => updateIndividualExpense(index, 'amount', e.target.value)}
                                                   placeholder="金额（元）"
-                                                  className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                  className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                               />
                                               <button
                                                   onClick={() => removeIndividualExpense(index)}
@@ -615,7 +615,7 @@
 
                                   <button
                                       onClick={addManualExpense}
-                                      className="mb-4 px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 flex items-center gap-1"
+                                      className="mb-4 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 flex items-center gap-1"
                                   >
                                       <PlusIcon />
                                       添加手动账单
@@ -632,7 +632,7 @@
                                                           value={expense.description}
                                                           onChange={(e) => updateManualExpenseDescription(index, e.target.value)}
                                                           placeholder="账单描述"
-                                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
                                                       />
                                                       <button
                                                           onClick={() => removeManualExpense(index)}
@@ -651,7 +651,7 @@
                                                                   value={expense.amounts[person] || 0}
                                                                   onChange={(e) => updateManualExpenseAmount(index, person, e.target.value)}
                                                                   placeholder="0"
-                                                                  className="w-28 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                                  className="w-28 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
                                                               />
                                                               <span className="text-xs text-gray-400">元</span>
                                                           </div>
@@ -659,7 +659,7 @@
                                                   </div>
 
                                                   <div className="mt-2 text-sm text-gray-500 text-right">
-                                                      合计: <span className="font-mono text-teal-700 font-medium">¥{total.toFixed(2)}</span>
+                                                      合计: <span className="font-mono text-pink-700 font-medium">¥{total.toFixed(2)}</span>
                                                   </div>
                                               </div>
                                           );
@@ -670,8 +670,8 @@
 
                           {/* 右侧：计算结果 */}
                           <div className="space-y-6">
-                              <div className="bg-blue-50 p-6 rounded-lg">
-                                  <h2 className="text-xl font-semibold mb-4 text-blue-800">
+                              <div className="bg-pink-50 p-6 rounded-lg">
+                                  <h2 className="text-xl font-semibold mb-4 text-pink-800">
                                       分摊结果
                                   </h2>
                                   
@@ -696,7 +696,7 @@
                                                       <span className="text-gray-600">手动分配：</span>
                                                       <span className="font-mono">¥{person.manualAmount.toFixed(2)}</span>
                                                   </div>
-                                                  <div className="flex justify-between font-semibold text-blue-600 border-t pt-1">
+                                                  <div className="flex justify-between font-semibold text-pink-600 border-t pt-1">
                                                       <span>应付总额：</span>
                                                       <span className="font-mono">¥{person.totalAmount.toFixed(2)}</span>
                                                   </div>
@@ -705,10 +705,10 @@
                                       ))}
                                   </div>
   
-                                  <div className="mt-6 p-4 bg-green-100 rounded-lg">
+                                  <div className="mt-6 p-4 bg-pink-100 rounded-lg">
                                       <div className="flex justify-between items-center">
-                                          <span className="text-green-800 font-semibold">总费用：</span>
-                                          <span className="text-green-800 font-bold text-lg font-mono">¥{totalAmount.toFixed(2)}</span>
+                                          <span className="text-pink-800 font-semibold">总费用：</span>
+                                          <span className="text-pink-800 font-bold text-lg font-mono">¥{totalAmount.toFixed(2)}</span>
                                       </div>
                                   </div>
                               </div>
@@ -719,7 +719,7 @@
                                   
                                   {sharedExpenses.length > 0 && (
                                       <div className="mb-4">
-                                          <h3 className="font-semibold text-purple-600 mb-2">全员共同费用</h3>
+                                          <h3 className="font-semibold text-pink-600 mb-2">全员共同费用</h3>
                                           <div className="space-y-2">
                                               {sharedExpenses.map((expense, index) => {
                                                   const totalShares = Object.values(expense.shares || {}).reduce((s, v) => s + v, 0);
@@ -744,7 +744,7 @@
   
                                   {partialExpenses.length > 0 && (
                                       <div className="mb-4">
-                                          <h3 className="font-semibold text-indigo-600 mb-2">部分参与者费用</h3>
+                                          <h3 className="font-semibold text-pink-600 mb-2">部分参与者费用</h3>
                                           <div className="space-y-2">
                                               {partialExpenses.map((expense, index) => (
                                                   <div key={index} className="text-sm">
@@ -763,7 +763,7 @@
   
                                   {individualExpenses.length > 0 && (
                                       <div>
-                                          <h3 className="font-semibold text-orange-600 mb-2">个人费用</h3>
+                                          <h3 className="font-semibold text-pink-600 mb-2">个人费用</h3>
                                           <div className="space-y-2">
                                               {individualExpenses.map((expense, index) => (
                                                   <div key={index} className="flex justify-between text-sm">
@@ -777,7 +777,7 @@
 
                                   {manualExpenses.length > 0 && (
                                       <div className="mt-4">
-                                          <h3 className="font-semibold text-teal-600 mb-2">手动分配费用</h3>
+                                          <h3 className="font-semibold text-pink-600 mb-2">手动分配费用</h3>
                                           <div className="space-y-2">
                                               {manualExpenses.map((expense, index) => {
                                                   const total = Object.values(expense.amounts).reduce((s, v) => s + v, 0);
