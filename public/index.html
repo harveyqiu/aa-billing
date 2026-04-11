@@ -574,36 +574,40 @@
   
                                   <div className="space-y-3">
                                       {individualExpenses.map((expense, index) => (
-                                          <div key={index} className="flex gap-2 items-center">
-                                              <select
-                                                  value={expense.person}
-                                                  onChange={(e) => updateIndividualExpense(index, 'person', e.target.value)}
-                                                  className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                              >
-                                                  {people.map(person => (
-                                                      <option key={person} value={person}>{person}</option>
-                                                  ))}
-                                              </select>
-                                              <input
-                                                  type="text"
-                                                  value={expense.description}
-                                                  onChange={(e) => updateIndividualExpense(index, 'description', e.target.value)}
-                                                  placeholder="费用描述"
-                                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                              />
-                                              <input
-                                                  type="number"
-                                                  value={expense.amount}
-                                                  onChange={(e) => updateIndividualExpense(index, 'amount', e.target.value)}
-                                                  placeholder="金额（元）"
-                                                  className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                              />
-                                              <button
-                                                  onClick={() => removeIndividualExpense(index)}
-                                                  className="text-red-500 hover:text-red-700 p-1"
-                                              >
-                                                  <MinusIcon />
-                                              </button>
+                                          <div key={index} className="flex flex-col sm:flex-row gap-2">
+                                              <div className="flex gap-2 items-center flex-1 min-w-0">
+                                                  <select
+                                                      value={expense.person}
+                                                      onChange={(e) => updateIndividualExpense(index, 'person', e.target.value)}
+                                                      className="w-20 flex-shrink-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                  >
+                                                      {people.map(person => (
+                                                          <option key={person} value={person}>{person}</option>
+                                                      ))}
+                                                  </select>
+                                                  <input
+                                                      type="text"
+                                                      value={expense.description}
+                                                      onChange={(e) => updateIndividualExpense(index, 'description', e.target.value)}
+                                                      placeholder="费用描述"
+                                                      className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                  />
+                                              </div>
+                                              <div className="flex gap-2 items-center">
+                                                  <input
+                                                      type="number"
+                                                      value={expense.amount}
+                                                      onChange={(e) => updateIndividualExpense(index, 'amount', e.target.value)}
+                                                      placeholder="金额（元）"
+                                                      className="flex-1 sm:w-24 sm:flex-none min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                  />
+                                                  <button
+                                                      onClick={() => removeIndividualExpense(index)}
+                                                      className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                                                  >
+                                                      <MinusIcon />
+                                                  </button>
+                                              </div>
                                           </div>
                                       ))}
                                   </div>
@@ -649,15 +653,15 @@
                                                   <div className="space-y-2">
                                                       {people.map(person => (
                                                           <div key={person} className="flex items-center gap-2">
-                                                              <span className="text-sm text-gray-700 w-16 shrink-0">{person}</span>
+                                                              <span className="text-sm text-gray-700 w-16 shrink-0 truncate">{person}</span>
                                                               <input
                                                                   type="number"
                                                                   value={expense.amounts[person] || 0}
                                                                   onChange={(e) => updateManualExpenseAmount(index, person, e.target.value)}
                                                                   placeholder="0"
-                                                                  className="w-28 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                                  className="flex-1 min-w-0 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                                                               />
-                                                              <span className="text-xs text-gray-400">元</span>
+                                                              <span className="text-xs text-gray-400 shrink-0">元</span>
                                                           </div>
                                                       ))}
                                                   </div>
