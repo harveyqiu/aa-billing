@@ -398,27 +398,29 @@
                                           const isWeighted = totalShares > 0 && people.some(p => (expense.shares || {})[p] !== 1);
                                           return (
                                               <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white">
-                                                  <div className="flex gap-2 items-center mb-3">
+                                                  <div className="flex flex-col sm:flex-row gap-2 mb-3">
                                                       <input
                                                           type="text"
                                                           value={expense.description}
                                                           onChange={(e) => updateSharedExpense(index, 'description', e.target.value)}
                                                           placeholder="费用描述"
-                                                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                          className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                       />
-                                                      <input
-                                                          type="number"
-                                                          value={expense.amount}
-                                                          onChange={(e) => updateSharedExpense(index, 'amount', e.target.value)}
-                                                          placeholder="金额（元）"
-                                                          className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                      />
-                                                      <button
-                                                          onClick={() => removeSharedExpense(index)}
-                                                          className="text-red-500 hover:text-red-700 p-1"
-                                                      >
-                                                          <MinusIcon />
-                                                      </button>
+                                                      <div className="flex gap-2 items-center">
+                                                          <input
+                                                              type="number"
+                                                              value={expense.amount}
+                                                              onChange={(e) => updateSharedExpense(index, 'amount', e.target.value)}
+                                                              placeholder="金额（元）"
+                                                              className="flex-1 sm:w-28 sm:flex-none min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                          />
+                                                          <button
+                                                              onClick={() => removeSharedExpense(index)}
+                                                              className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                                                          >
+                                                              <MinusIcon />
+                                                          </button>
+                                                      </div>
                                                   </div>
 
                                                   <div className="flex flex-wrap gap-3 items-center">
@@ -478,27 +480,29 @@
                                   <div className="space-y-4">
                                       {partialExpenses.map((expense, index) => (
                                           <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white">
-                                              <div className="flex gap-2 items-center mb-3">
+                                              <div className="flex flex-col sm:flex-row gap-2 mb-3">
                                                   <input
                                                       type="text"
                                                       value={expense.description}
                                                       onChange={(e) => updatePartialExpense(index, 'description', e.target.value)}
                                                       placeholder="费用描述"
-                                                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                      className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                                   />
-                                                  <input
-                                                      type="number"
-                                                      value={expense.amount}
-                                                      onChange={(e) => updatePartialExpense(index, 'amount', e.target.value)}
-                                                      placeholder="金额（元）"
-                                                      className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                  />
-                                                  <button
-                                                      onClick={() => removePartialExpense(index)}
-                                                      className="text-red-500 hover:text-red-700 p-1"
-                                                  >
-                                                      <MinusIcon />
-                                                  </button>
+                                                  <div className="flex gap-2 items-center">
+                                                      <input
+                                                          type="number"
+                                                          value={expense.amount}
+                                                          onChange={(e) => updatePartialExpense(index, 'amount', e.target.value)}
+                                                          placeholder="金额（元）"
+                                                          className="flex-1 sm:w-24 sm:flex-none min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                      />
+                                                      <button
+                                                          onClick={() => removePartialExpense(index)}
+                                                          className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                                                      >
+                                                          <MinusIcon />
+                                                      </button>
+                                                  </div>
                                               </div>
                                               
                                               <div className="flex flex-wrap gap-2 items-center">
