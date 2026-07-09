@@ -96,6 +96,16 @@
                   <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"></circle>
               </svg>
           );
+
+          const ShareIcon = () => (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+          );
   
           function AABillCalculator() {
               const saved = loadFromStorage();
@@ -110,12 +120,15 @@
               const [discountEnabled, setDiscountEnabled] = useState(saved ? !!saved.discountEnabled : false);
               const [discountType, setDiscountType] = useState(saved && saved.discountType ? saved.discountType : 'percent'); // 'percent' | 'amount'
               const [discountValue, setDiscountValue] = useState(saved && saved.discountValue !== undefined ? saved.discountValue : 0);
+              // 收款人：账单的代付人，其他人分账后把各自金额转给这个人
+              const [payerName, setPayerName] = useState(saved && saved.payerName ? saved.payerName : '');
+              const [shareCopied, setShareCopied] = useState(false);
 
               useEffect(() => {
-                  const ok = saveToStorage({ people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses, discountEnabled, discountType, discountValue });
+                  const ok = saveToStorage({ people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses, discountEnabled, discountType, discountValue, payerName });
                   if (!ok) setStorageError(true);
                   else setStorageError(false);
-              }, [people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses, discountEnabled, discountType, discountValue]);
+              }, [people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses, discountEnabled, discountType, discountValue, payerName]);
 
               const clearAllBills = () => {
                   if (window.confirm('确定要清除所有账单吗？此操作不可撤销。')) {
@@ -126,6 +139,7 @@
                       setDiscountEnabled(false);
                       setDiscountType('percent');
                       setDiscountValue(0);
+                      setPayerName('');
                   }
               };
   
@@ -346,7 +360,180 @@
                       };
                   });
               }, [results, totalAmount, discountAmount]);
-  
+
+              // 收款人（代付人）：用于生成分享内容，其他人需要把钱转给这个人
+              const effectivePayer = people.includes(payerName) ? payerName : (people[0] || '');
+
+              // 需要转账给收款人的明细（不含收款人自己）
+              const transfers = useMemo(
+                  () => discountedResults.filter(p => p.name !== effectivePayer),
+                  [discountedResults, effectivePayer]
+              );
+              const transfersTotal = useMemo(
+                  () => transfers.reduce((sum, p) => sum + p.finalAmount, 0),
+                  [transfers]
+              );
+
+              // 生成可复制的分享文本
+              const shareText = useMemo(() => {
+                  if (people.length === 0) return '';
+                  const lines = ['🧾 聚会AA分账结果', ''];
+                  discountedResults.forEach(p => {
+                      lines.push(`${p.name}：¥${p.finalAmount.toFixed(2)}`);
+                  });
+                  if (discountEnabled && discountAmount > 0) {
+                      lines.push('', `（已优惠 ¥${discountAmount.toFixed(2)}，实收合计 ¥${finalTotalAmount.toFixed(2)}）`);
+                  }
+                  if (effectivePayer && transfers.length > 0) {
+                      lines.push('', `💰 请转账给 ${effectivePayer}：`);
+                      transfers.forEach(p => {
+                          lines.push(`· ${p.name}：¥${p.finalAmount.toFixed(2)}`);
+                      });
+                      lines.push(`合计：¥${transfersTotal.toFixed(2)}`);
+                  }
+                  return lines.join('\n');
+              }, [people, discountedResults, discountEnabled, discountAmount, finalTotalAmount, effectivePayer, transfers, transfersTotal]);
+
+              // 复制分享文本到剪贴板
+              const copyShareText = async () => {
+                  try {
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                          await navigator.clipboard.writeText(shareText);
+                      } else {
+                          const textarea = document.createElement('textarea');
+                          textarea.value = shareText;
+                          textarea.style.position = 'fixed';
+                          textarea.style.opacity = '0';
+                          document.body.appendChild(textarea);
+                          textarea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textarea);
+                      }
+                      setShareCopied(true);
+                      setTimeout(() => setShareCopied(false), 2000);
+                  } catch (e) {
+                      console.error('[aa-billing] 复制到剪贴板失败:', e);
+                      window.alert('复制失败，请手动选择文本复制');
+                  }
+              };
+
+              // 生成分享图片并下载
+              const downloadShareImage = () => {
+                  const rowHeight = 36;
+                  const width = 640;
+                  const padding = 32;
+                  let y = padding;
+
+                  const headerHeight = 90;
+                  const summaryRows = discountedResults.length;
+                  const discountNoteHeight = (discountEnabled && discountAmount > 0) ? 30 : 0;
+                  const transferHeaderHeight = (effectivePayer && transfers.length > 0) ? 44 : 0;
+                  const transferRows = transfers.length;
+                  const transferTotalHeight = (effectivePayer && transfers.length > 0) ? 40 : 0;
+                  const footerHeight = 50;
+
+                  const height = headerHeight
+                      + summaryRows * rowHeight
+                      + discountNoteHeight
+                      + transferHeaderHeight
+                      + transferRows * rowHeight
+                      + transferTotalHeight
+                      + footerHeight
+                      + padding;
+
+                  const scale = 2;
+                  const canvas = document.createElement('canvas');
+                  canvas.width = width * scale;
+                  canvas.height = height * scale;
+                  const ctx = canvas.getContext('2d');
+                  ctx.scale(scale, scale);
+
+                  // 背景
+                  ctx.fillStyle = '#ffffff';
+                  ctx.fillRect(0, 0, width, height);
+
+                  // 标题
+                  ctx.fillStyle = '#1e3a8a';
+                  ctx.font = 'bold 24px sans-serif';
+                  ctx.fillText('🧾 聚会AA分账结果', padding, y + 24);
+                  ctx.fillStyle = '#6b7280';
+                  ctx.font = '13px sans-serif';
+                  const dateStr = new Date().toLocaleDateString('zh-CN');
+                  ctx.fillText(dateStr, padding, y + 48);
+                  y += headerHeight;
+
+                  // 每人应付
+                  ctx.font = '16px sans-serif';
+                  discountedResults.forEach(p => {
+                      ctx.strokeStyle = '#e5e7eb';
+                      ctx.beginPath();
+                      ctx.moveTo(padding, y + rowHeight - 10);
+                      ctx.lineTo(width - padding, y + rowHeight - 10);
+                      ctx.stroke();
+
+                      ctx.fillStyle = '#374151';
+                      ctx.fillText(p.name, padding, y + 14);
+                      ctx.fillStyle = '#111827';
+                      ctx.font = 'bold 16px monospace';
+                      const amountText = `¥${p.finalAmount.toFixed(2)}`;
+                      const amountWidth = ctx.measureText(amountText).width;
+                      ctx.fillText(amountText, width - padding - amountWidth, y + 14);
+                      ctx.font = '16px sans-serif';
+                      y += rowHeight;
+                  });
+
+                  if (discountEnabled && discountAmount > 0) {
+                      ctx.fillStyle = '#db2777';
+                      ctx.font = '13px sans-serif';
+                      ctx.fillText(`已优惠 ¥${discountAmount.toFixed(2)}，实收合计 ¥${finalTotalAmount.toFixed(2)}`, padding, y + 10);
+                      y += discountNoteHeight;
+                  }
+
+                  if (effectivePayer && transfers.length > 0) {
+                      ctx.fillStyle = '#065f46';
+                      ctx.font = 'bold 16px sans-serif';
+                      ctx.fillText(`💰 请转账给 ${effectivePayer}`, padding, y + 20);
+                      y += transferHeaderHeight;
+
+                      ctx.font = '15px sans-serif';
+                      transfers.forEach(p => {
+                          ctx.fillStyle = '#374151';
+                          ctx.fillText(`· ${p.name}`, padding, y + 14);
+                          ctx.fillStyle = '#059669';
+                          ctx.font = 'bold 15px monospace';
+                          const amountText = `¥${p.finalAmount.toFixed(2)}`;
+                          const amountWidth = ctx.measureText(amountText).width;
+                          ctx.fillText(amountText, width - padding - amountWidth, y + 14);
+                          ctx.font = '15px sans-serif';
+                          y += rowHeight;
+                      });
+
+                      ctx.strokeStyle = '#d1d5db';
+                      ctx.beginPath();
+                      ctx.moveTo(padding, y);
+                      ctx.lineTo(width - padding, y);
+                      ctx.stroke();
+
+                      ctx.fillStyle = '#065f46';
+                      ctx.font = 'bold 16px sans-serif';
+                      ctx.fillText('合计', padding, y + 26);
+                      ctx.font = 'bold 18px monospace';
+                      const totalText = `¥${transfersTotal.toFixed(2)}`;
+                      const totalWidth = ctx.measureText(totalText).width;
+                      ctx.fillText(totalText, width - padding - totalWidth, y + 26);
+                      y += transferTotalHeight;
+                  }
+
+                  ctx.fillStyle = '#9ca3af';
+                  ctx.font = '12px sans-serif';
+                  ctx.fillText('由 聚会AA分钱计算器 生成', padding, y + 20);
+
+                  const link = document.createElement('a');
+                  link.download = `aa-billing-${new Date().toISOString().slice(0, 10)}.png`;
+                  link.href = canvas.toDataURL('image/png');
+                  link.click();
+              };
+
               return (
                   <div className="max-w-6xl mx-auto p-4 sm:p-6 bg-white min-h-screen">
                       {storageError && (
@@ -757,6 +944,56 @@
                                       <div className="mt-3 text-sm text-pink-700 bg-pink-50 border border-pink-200 rounded-md px-3 py-2">
                                           共优惠 ¥{discountAmount.toFixed(2)}，实际应付合计 ¥{finalTotalAmount.toFixed(2)}
                                       </div>
+                                  )}
+                              </div>
+
+                              {/* 分享结算结果 */}
+                              <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+                                  <h2 className="text-xl font-semibold mb-1 flex items-center gap-2">
+                                      <ShareIcon />
+                                      分享结算结果
+                                  </h2>
+                                  <p className="text-sm text-gray-500 mb-4">通常由一人先垫付账单，其他人再把各自应付金额转给这个人。选择收款人后可一键复制文本或生成图片，方便发到群里</p>
+
+                                  {people.length > 0 ? (
+                                      <React.Fragment>
+                                          <div className="flex items-center gap-2 mb-4">
+                                              <span className="text-sm text-gray-600 shrink-0">收款人（代付人）：</span>
+                                              <select
+                                                  value={effectivePayer}
+                                                  onChange={(e) => setPayerName(e.target.value)}
+                                                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                              >
+                                                  {people.map(person => (
+                                                      <option key={person} value={person}>{person}</option>
+                                                  ))}
+                                              </select>
+                                          </div>
+
+                                          <textarea
+                                              readOnly
+                                              value={shareText}
+                                              rows={Math.min(12, shareText.split('\n').length + 1)}
+                                              className="w-full px-3 py-2 mb-3 border border-gray-300 rounded-md font-mono text-sm text-gray-700 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                          />
+
+                                          <div className="flex flex-wrap gap-2">
+                                              <button
+                                                  onClick={copyShareText}
+                                                  className="px-4 py-2 bg-cyan-600 text-white rounded-md hover:bg-cyan-700 text-sm font-medium"
+                                              >
+                                                  {shareCopied ? '已复制 ✓' : '复制文本'}
+                                              </button>
+                                              <button
+                                                  onClick={downloadShareImage}
+                                                  className="px-4 py-2 bg-cyan-100 text-cyan-800 border border-cyan-300 rounded-md hover:bg-cyan-200 text-sm font-medium"
+                                              >
+                                                  保存为图片
+                                              </button>
+                                          </div>
+                                      </React.Fragment>
+                                  ) : (
+                                      <p className="text-sm text-gray-400">请先添加参与者</p>
                                   )}
                               </div>
                           </div>
