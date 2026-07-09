@@ -89,6 +89,13 @@
                   <polyline points="16,11 18,13 22,9"></polyline>
               </svg>
           );
+
+          const TagIcon = () => (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42L12 2Z"></path>
+                  <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"></circle>
+              </svg>
+          );
   
           function AABillCalculator() {
               const saved = loadFromStorage();
@@ -99,12 +106,16 @@
               const [partialExpenses, setPartialExpenses] = useState(saved ? saved.partialExpenses : []);
               const [individualExpenses, setIndividualExpenses] = useState(saved ? saved.individualExpenses : []);
               const [manualExpenses, setManualExpenses] = useState(saved ? saved.manualExpenses : []);
+              // 整体折扣：最后支付账单时的整体优惠，会按每人应付金额的比例分摊到每个人身上
+              const [discountEnabled, setDiscountEnabled] = useState(saved ? !!saved.discountEnabled : false);
+              const [discountType, setDiscountType] = useState(saved && saved.discountType ? saved.discountType : 'percent'); // 'percent' | 'amount'
+              const [discountValue, setDiscountValue] = useState(saved && saved.discountValue !== undefined ? saved.discountValue : 0);
 
               useEffect(() => {
-                  const ok = saveToStorage({ people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses });
+                  const ok = saveToStorage({ people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses, discountEnabled, discountType, discountValue });
                   if (!ok) setStorageError(true);
                   else setStorageError(false);
-              }, [people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses]);
+              }, [people, sharedExpenses, partialExpenses, individualExpenses, manualExpenses, discountEnabled, discountType, discountValue]);
 
               const clearAllBills = () => {
                   if (window.confirm('确定要清除所有账单吗？此操作不可撤销。')) {
@@ -112,6 +123,9 @@
                       setPartialExpenses([]);
                       setIndividualExpenses([]);
                       setManualExpenses([]);
+                      setDiscountEnabled(false);
+                      setDiscountType('percent');
+                      setDiscountValue(0);
                   }
               };
   
@@ -309,6 +323,29 @@
                   () => results.reduce((sum, person) => sum + person.totalAmount, 0),
                   [results]
               );
+
+              // 整体折扣金额（不超过总金额，不小于0）
+              const discountAmount = useMemo(() => {
+                  if (!discountEnabled || totalAmount <= 0) return 0;
+                  const raw = discountType === 'percent'
+                      ? totalAmount * (Math.min(100, Math.max(0, discountValue)) / 100)
+                      : Math.max(0, discountValue);
+                  return Math.min(raw, totalAmount);
+              }, [discountEnabled, discountType, discountValue, totalAmount]);
+
+              const finalTotalAmount = totalAmount - discountAmount;
+
+              // 将折扣按每人应付金额占比分摊到每个人身上
+              const discountedResults = useMemo(() => {
+                  return results.map(person => {
+                      const personDiscount = totalAmount > 0 ? (person.totalAmount / totalAmount) * discountAmount : 0;
+                      return {
+                          ...person,
+                          discountAmount: personDiscount,
+                          finalAmount: person.totalAmount - personDiscount
+                      };
+                  });
+              }, [results, totalAmount, discountAmount]);
   
               return (
                   <div className="max-w-6xl mx-auto p-4 sm:p-6 bg-white min-h-screen">
@@ -674,6 +711,54 @@
                                       })}
                                   </div>
                               </div>
+
+                              {/* 整体折扣 */}
+                              <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+                                  <h2 className="text-xl font-semibold mb-1 flex items-center gap-2">
+                                      <TagIcon />
+                                      整体折扣
+                                  </h2>
+                                  <p className="text-sm text-gray-500 mb-4">最后统一支付账单时如有整体优惠（例如商家折扣、满减），开启后会按每人应付金额的比例自动分摊到每个人</p>
+
+                                  <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
+                                      <input
+                                          type="checkbox"
+                                          checked={discountEnabled}
+                                          onChange={(e) => setDiscountEnabled(e.target.checked)}
+                                          className="w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
+                                      />
+                                      <span className="text-sm font-medium text-gray-700">启用整体折扣</span>
+                                  </label>
+
+                                  {discountEnabled && (
+                                      <div className="flex flex-wrap gap-2 items-center">
+                                          <select
+                                              value={discountType}
+                                              onChange={(e) => setDiscountType(e.target.value)}
+                                              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                          >
+                                              <option value="percent">按比例（%）</option>
+                                              <option value="amount">按金额（元）</option>
+                                          </select>
+                                          <input
+                                              type="number"
+                                              min="0"
+                                              max={discountType === 'percent' ? 100 : undefined}
+                                              value={discountValue}
+                                              onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                                              placeholder={discountType === 'percent' ? '如：10 表示优惠10%' : '如：50 表示优惠50元'}
+                                              className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                          />
+                                          <span className="text-sm text-gray-500">{discountType === 'percent' ? '%' : '元'}</span>
+                                      </div>
+                                  )}
+
+                                  {discountEnabled && discountAmount > 0 && (
+                                      <div className="mt-3 text-sm text-pink-700 bg-pink-50 border border-pink-200 rounded-md px-3 py-2">
+                                          共优惠 ¥{discountAmount.toFixed(2)}，实际应付合计 ¥{finalTotalAmount.toFixed(2)}
+                                      </div>
+                                  )}
+                              </div>
                           </div>
 
                           {/* 右侧：计算结果 */}
@@ -684,7 +769,7 @@
                                   </h2>
                                   
                                   <div className="space-y-4">
-                                      {results.map((person) => (
+                                      {discountedResults.map((person) => (
                                           <div key={person.name} className="bg-white p-4 rounded-lg shadow-sm">
                                               <div className="font-semibold text-gray-800 mb-2">{person.name}</div>
                                               <div className="space-y-1 text-sm">
@@ -708,16 +793,40 @@
                                                       <span>应付总额：</span>
                                                       <span className="font-mono">¥{person.totalAmount.toFixed(2)}</span>
                                                   </div>
+                                                  {discountEnabled && discountAmount > 0 && (
+                                                      <React.Fragment>
+                                                          <div className="flex justify-between text-pink-600">
+                                                              <span>整体折扣：</span>
+                                                              <span className="font-mono">-¥{person.discountAmount.toFixed(2)}</span>
+                                                          </div>
+                                                          <div className="flex justify-between font-semibold text-green-700 border-t pt-1">
+                                                              <span>实付金额：</span>
+                                                              <span className="font-mono">¥{person.finalAmount.toFixed(2)}</span>
+                                                          </div>
+                                                      </React.Fragment>
+                                                  )}
                                               </div>
                                           </div>
                                       ))}
                                   </div>
-  
-                                  <div className="mt-6 p-4 bg-green-100 rounded-lg">
+
+                                  <div className="mt-6 p-4 bg-green-100 rounded-lg space-y-1">
                                       <div className="flex justify-between items-center">
                                           <span className="text-green-800 font-semibold">总费用：</span>
-                                          <span className="text-green-800 font-bold text-lg font-mono">¥{totalAmount.toFixed(2)}</span>
+                                          <span className={`text-green-800 font-bold text-lg font-mono ${discountEnabled && discountAmount > 0 ? 'line-through opacity-60' : ''}`}>¥{totalAmount.toFixed(2)}</span>
                                       </div>
+                                      {discountEnabled && discountAmount > 0 && (
+                                          <React.Fragment>
+                                              <div className="flex justify-between items-center text-pink-700">
+                                                  <span className="font-semibold">整体折扣：</span>
+                                                  <span className="font-bold font-mono">-¥{discountAmount.toFixed(2)}</span>
+                                              </div>
+                                              <div className="flex justify-between items-center">
+                                                  <span className="text-green-800 font-semibold">实收总额：</span>
+                                                  <span className="text-green-800 font-bold text-lg font-mono">¥{finalTotalAmount.toFixed(2)}</span>
+                                              </div>
+                                          </React.Fragment>
+                                      )}
                                   </div>
                               </div>
   
