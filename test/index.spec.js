@@ -1,20 +1,24 @@
-import { env, createExecutionContext, waitOnExecutionContext, SELF } from 'cloudflare:test';
-import { describe, it, expect } from 'vitest';
-import worker from '../src';
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
 
-describe('Hello World worker', () => {
-	it('responds with Hello World! (unit style)', async () => {
-		const request = new Request('http://example.com');
-		// Create an empty context to pass to `worker.fetch()`.
-		const ctx = createExecutionContext();
-		const response = await worker.fetch(request, env, ctx);
-		// Wait for all `Promise`s passed to `ctx.waitUntil()` to settle before running test assertions
-		await waitOnExecutionContext(ctx);
-		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
+const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+
+describe('static AA billing page hardening', () => {
+	it('declares a restrictive Content Security Policy', () => {
+		expect(html).toContain('Content-Security-Policy');
+		expect(html).toContain("object-src 'none'");
+		expect(html).toContain("frame-ancestors 'none'");
+		expect(html).toContain("connect-src 'none'");
 	});
 
-	it('responds with Hello World! (integration style)', async () => {
-		const response = await SELF.fetch('http://example.com');
-		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
+	it('sanitizes persisted data before hydrating state', () => {
+		expect(html).toContain('const sanitizeLoadedData = (data) =>');
+		expect(html).toContain('return sanitizeLoadedData(JSON.parse(saved));');
+		expect(html).toContain('const sanitizeShares = (value) =>');
+	});
+
+	it('uses React 18 createRoot instead of the legacy renderer', () => {
+		expect(html).toContain('ReactDOM.createRoot');
+		expect(html).not.toContain('ReactDOM.render(<AABillCalculator />');
 	});
 });
